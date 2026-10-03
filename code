@@ -1,0 +1,1103 @@
+# ============================================================
+# ACTIVIDAD 2 - IDENTIFICACIÓN DE UN SISTEMA DE SEGUNDO ORDEN
+# SISTEMA SUBAMORTIGUADO CON TIEMPO MUERTO
+#
+# Python + Tkinter + NumPy + Matplotlib
+# ============================================================
+
+import tkinter as tk
+from tkinter import ttk, messagebox
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+
+# ============================================================
+# DATOS INICIALES OBTENIDOS DE LA GRÁFICA
+# ============================================================
+
+K_INICIAL = 4.0
+VALOR_MAXIMO_INICIAL = 5.0
+TIEMPO_MUERTO_INICIAL = 2.0
+TIEMPO_PICO_INICIAL = 2.7
+
+
+# ============================================================
+# FUNCIÓN PRINCIPAL
+# ============================================================
+
+def calcular():
+
+    try:
+
+        # ----------------------------------------------------
+        # Leer datos
+        # ----------------------------------------------------
+
+        K = float(entry_K.get())
+        y_max = float(entry_ymax.get())
+        L = float(entry_L.get())
+        t_pico_grafica = float(entry_tpico.get())
+
+        if K <= 0 or y_max <= 0 or L < 0 or t_pico_grafica <= L:
+            raise ValueError
+
+        # ----------------------------------------------------
+        # 1. CÁLCULO DEL SOBREIMPULSO
+        # ----------------------------------------------------
+
+        Mp = (y_max - K) / K
+
+        # ----------------------------------------------------
+        # 2. CÁLCULO DE ZETA
+        #
+        # Mp = exp[-zeta*pi/sqrt(1-zeta²)]
+        #
+        # Despejando:
+        #
+        # zeta = -ln(Mp) /
+        #        sqrt(pi² + ln(Mp)²)
+        # ----------------------------------------------------
+
+        if Mp <= 0 or Mp >= 1:
+            raise ValueError(
+                "El sobreimpulso debe estar entre 0 y 1."
+            )
+
+        ln_Mp = np.log(Mp)
+
+        zeta = (
+            -ln_Mp /
+            np.sqrt(np.pi**2 + ln_Mp**2)
+        )
+
+        # ----------------------------------------------------
+        # 3. TIEMPO DE PICO REAL
+        #
+        # La gráfica comienza después del tiempo muerto.
+        # ----------------------------------------------------
+
+        tp = t_pico_grafica - L
+
+        # ----------------------------------------------------
+        # 4. CÁLCULO DE wn
+        #
+        # tp = pi / (wn*sqrt(1-zeta²))
+        #
+        # wn = pi /
+        #      (tp*sqrt(1-zeta²))
+        # ----------------------------------------------------
+
+        wn = (
+            np.pi /
+            (
+                tp *
+                np.sqrt(1 - zeta**2)
+            )
+        )
+
+        # ----------------------------------------------------
+        # 5. COEFICIENTES DEL DENOMINADOR
+        #
+        # s² + 2*zeta*wn*s + wn²
+        # ----------------------------------------------------
+
+        coef_s = 2 * zeta * wn
+        coef_constante = wn**2
+
+        # ----------------------------------------------------
+        # 6. NUMERADOR
+        #
+        # K*wn²
+        # ----------------------------------------------------
+
+        numerador = K * wn**2
+
+        # ----------------------------------------------------
+        # PROCEDIMIENTO
+        # ----------------------------------------------------
+
+        procedimiento = f"""
+══════════════════════════════════════════════════════════════
+          RESULTADOS DE IDENTIFICACIÓN
+          SISTEMA DE SEGUNDO ORDEN SUBAMORTIGUADO
+══════════════════════════════════════════════════════════════
+
+
+1. VALOR FINAL
+
+De la gráfica:
+
+K = {K:.4f}
+
+
+2. VALOR MÁXIMO
+
+Ymax = {y_max:.4f}
+
+
+3. CÁLCULO DEL SOBREIMPULSO
+
+Fórmula:
+
+             Ymax - Yfinal
+Mp = ─────────────────────────
+             Yfinal
+
+
+Sustituyendo:
+
+Mp = ({y_max:.4f} - {K:.4f}) / {K:.4f}
+
+Mp = {Mp:.6f}
+
+Mp = {Mp*100:.2f}%
+
+
+4. CÁLCULO DEL FACTOR DE AMORTIGUAMIENTO
+
+Para un sistema subamortiguado:
+
+             -ln(Mp)
+ζ = ─────────────────────────────
+       √(π² + ln(Mp)²)
+
+
+Sustituyendo:
+
+ζ = {zeta:.6f}
+
+
+Por lo tanto:
+
+ζ = {zeta:.4f}
+
+
+5. TIEMPO DE PICO
+
+Tiempo del pico observado:
+
+t_pico(gráfica) = {t_pico_grafica:.4f} s
+
+
+Tiempo muerto:
+
+L = {L:.4f} s
+
+
+Por lo tanto, el tiempo de pico dinámico es:
+
+t_p = t_pico - L
+
+t_p = {t_pico_grafica:.4f} - {L:.4f}
+
+t_p = {tp:.4f} s
+
+
+6. CÁLCULO DE LA FRECUENCIA NATURAL
+
+Para un sistema subamortiguado:
+
+              π
+t_p = ───────────────────────
+      ωn √(1 - ζ²)
+
+
+Despejando:
+
+             π
+ωn = ───────────────────────
+      t_p √(1 - ζ²)
+
+
+Sustituyendo:
+
+ωn = {wn:.6f} rad/s
+
+
+Por lo tanto:
+
+ωn = {wn:.4f} rad/s
+
+
+7. FUNCIÓN GENERAL DE SEGUNDO ORDEN
+
+              Kωn²
+G(s) = ─────────────────────────────
+       s² + 2ζωn s + ωn²
+
+
+8. SUSTITUCIÓN DE LOS PARÁMETROS
+
+K = {K:.4f}
+
+ζ = {zeta:.4f}
+
+ωn = {wn:.4f}
+
+
+2ζωn = {coef_s:.6f}
+
+ωn² = {coef_constante:.6f}
+
+Kωn² = {numerador:.6f}
+
+
+9. FUNCIÓN DE TRANSFERENCIA SIN TIEMPO MUERTO
+
+             {numerador:.6f}
+G(s) = ─────────────────────────────────
+       s² + {coef_s:.6f}s + {coef_constante:.6f}
+
+
+10. INCLUSIÓN DEL TIEMPO MUERTO
+
+Como:
+
+L = {L:.4f} s
+
+
+La función de transferencia completa es:
+
+                         {numerador:.6f}
+G(s) = ─────────────────────────────────────── e^(-{L:.4f}s)
+       s² + {coef_s:.6f}s + {coef_constante:.6f}
+
+
+══════════════════════════════════════════════════════════════
+"""
+
+        text_resultado.delete(
+            "1.0",
+            tk.END
+        )
+
+        text_resultado.insert(
+            tk.END,
+            procedimiento
+        )
+
+        # ====================================================
+        # CREAR RESPUESTA DEL SISTEMA
+        # ====================================================
+
+        t = np.linspace(0, 8, 2500)
+
+        # Tiempo después del tiempo muerto
+        td = np.maximum(t - L, 0)
+
+        # Frecuencia amortiguada
+        wd = wn * np.sqrt(1 - zeta**2)
+
+        # Respuesta al escalón de un segundo orden
+        #
+        # y(t) =
+        # K [1 -
+        # e^(-zeta*wn*t) /
+        # sqrt(1-zeta²)
+        # sin(wd*t + phi)]
+
+        phi = np.arccos(zeta)
+
+        y_dinamica = K * (
+            1 -
+            (
+                np.exp(-zeta * wn * td)
+                / np.sqrt(1 - zeta**2)
+            )
+            *
+            np.sin(
+                wd * td + phi
+            )
+        )
+
+        # Antes del tiempo muerto la salida es cero
+        y_modelo = np.where(
+            t < L,
+            0,
+            y_dinamica
+        )
+
+        # ====================================================
+        # CURVA DE REFERENCIA APROXIMADA
+        # ====================================================
+
+        t_ref = np.array([
+            0.0,
+            0.5,
+            1.0,
+            1.5,
+            2.0,
+            2.2,
+            2.4,
+            2.6,
+            2.7,
+            2.8,
+            3.0,
+            3.2,
+            3.4,
+            3.6,
+            3.8,
+            4.0,
+            4.2,
+            4.5,
+            5.0,
+            6.0,
+            7.0,
+            8.0
+        ])
+
+        y_ref = np.array([
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.5,
+            1.5,
+            3.5,
+            5.0,
+            4.5,
+            3.9,
+            3.75,
+            3.9,
+            4.05,
+            4.08,
+            4.02,
+            4.00,
+            4.00,
+            4.00,
+            4.00,
+            4.00,
+            4.00
+        ])
+
+        # ====================================================
+        # ERROR APROXIMADO
+        # ====================================================
+
+        y_modelo_ref = np.interp(
+            t_ref,
+            t,
+            y_modelo
+        )
+
+        error_abs = np.mean(
+            np.abs(
+                y_ref - y_modelo_ref
+            )
+        )
+
+        error_porcentaje = (
+            error_abs / K
+        ) * 100
+
+        similitud = max(
+            0,
+            100 - error_porcentaje
+        )
+
+        # ====================================================
+        # CARACTERÍSTICAS DEL MODELO
+        # ====================================================
+
+        indice_pico = np.argmax(
+            y_modelo
+        )
+
+        pico_modelo = y_modelo[
+            indice_pico
+        ]
+
+        tiempo_pico_modelo = t[
+            indice_pico
+        ]
+
+        Mp_modelo = (
+            (pico_modelo - K) / K
+        ) * 100
+
+        # ====================================================
+        # MOSTRAR COMPROBACIÓN
+        # ====================================================
+
+        comprobacion = f"""
+══════════════════════════════════════════════════════════════
+                 COMPROBACIÓN DEL MODELO
+══════════════════════════════════════════════════════════════
+
+Parámetros obtenidos:
+
+K = {K:.4f}
+
+ζ = {zeta:.4f}
+
+ωn = {wn:.4f} rad/s
+
+L = {L:.4f} s
+
+
+CARACTERÍSTICAS SIMULADAS
+
+Valor final:
+
+{y_modelo[-1]:.4f}
+
+
+Valor máximo:
+
+{pico_modelo:.4f}
+
+
+Tiempo del pico:
+
+{tiempo_pico_modelo:.4f} s
+
+
+Sobreimpulso de la simulación:
+
+{Mp_modelo:.2f}%
+
+
+COMPARACIÓN CON LA GRÁFICA
+
+Error absoluto promedio:
+
+{error_abs:.4f}
+
+
+Error porcentual aproximado:
+
+{error_porcentaje:.2f}%
+
+
+Similitud aproximada:
+
+{similitud:.2f}%
+
+
+INTERPRETACIÓN:
+
+La respuesta simulada presenta el comportamiento de un
+sistema de segundo orden subamortiguado.
+
+La respuesta permanece en cero durante el tiempo muerto L
+y posteriormente presenta un sobreimpulso antes de alcanzar
+el valor final K.
+
+Esto permite comprobar visualmente que la función de
+transferencia obtenida reproduce de manera aproximada la
+respuesta proporcionada en el problema.
+
+══════════════════════════════════════════════════════════════
+"""
+
+        text_similitud.delete(
+            "1.0",
+            tk.END
+        )
+
+        text_similitud.insert(
+            tk.END,
+            comprobacion
+        )
+
+        # ====================================================
+        # GRÁFICA
+        # ====================================================
+
+        ax.clear()
+
+        # Curva de referencia
+        ax.plot(
+            t_ref,
+            y_ref,
+            linestyle="--",
+            linewidth=2,
+            label="Curva proporcionada"
+        )
+
+        # Curva obtenida
+        ax.plot(
+            t,
+            y_modelo,
+            linewidth=2.5,
+            label="Modelo identificado"
+        )
+
+        # Valor final
+        ax.axhline(
+            K,
+            linestyle=":",
+            linewidth=1.8,
+            label=f"Valor final K = {K:.2f}"
+        )
+
+        # Tiempo muerto
+        ax.axvline(
+            L,
+            linestyle=":",
+            linewidth=1.8,
+            label=f"Tiempo muerto L = {L:.2f} s"
+        )
+
+        # Pico de referencia
+        ax.scatter(
+            [t_pico_grafica],
+            [y_max],
+            s=70,
+            zorder=5,
+            label=(
+                f"Pico referencia = "
+                f"({t_pico_grafica:.2f}, {y_max:.2f})"
+            )
+        )
+
+        # Pico calculado
+        ax.scatter(
+            [tiempo_pico_modelo],
+            [pico_modelo],
+            s=70,
+            zorder=5,
+            label=(
+                f"Pico modelo = "
+                f"({tiempo_pico_modelo:.2f}, "
+                f"{pico_modelo:.2f})"
+            )
+        )
+
+        ax.set_title(
+            "Identificación de un Sistema de Segundo Orden",
+            fontsize=14,
+            fontweight="bold"
+        )
+
+        ax.set_xlabel(
+            "Tiempo (s)"
+        )
+
+        ax.set_ylabel(
+            "Amplitud"
+        )
+
+        ax.set_xlim(
+            0,
+            8
+        )
+
+        ax.set_ylim(
+            0,
+            6
+        )
+
+        ax.grid(
+            True,
+            alpha=0.3
+        )
+
+        ax.legend(
+            fontsize=8,
+            loc="lower right"
+        )
+
+        canvas.draw()
+
+    except ValueError as error:
+
+        messagebox.showerror(
+            "Error",
+            "Revisa los datos introducidos.\n\n"
+            "El valor máximo debe ser mayor que el valor final "
+            "y el tiempo del pico debe ser mayor que el tiempo muerto."
+        )
+
+
+# ============================================================
+# GUARDAR GRÁFICA
+# ============================================================
+
+def guardar_grafica():
+
+    try:
+
+        archivo = (
+            "grafica_actividad_2_segundo_orden.png"
+        )
+
+        fig.savefig(
+            archivo,
+            dpi=300,
+            bbox_inches="tight"
+        )
+
+        messagebox.showinfo(
+            "Gráfica guardada",
+            f"La gráfica fue guardada como:\n\n{archivo}"
+        )
+
+    except Exception as error:
+
+        messagebox.showerror(
+            "Error",
+            str(error)
+        )
+
+
+# ============================================================
+# VENTANA PRINCIPAL
+# ============================================================
+
+root = tk.Tk()
+
+root.title(
+    "Actividad 2 - Identificación de Sistema de Segundo Orden"
+)
+
+root.geometry(
+    "1300x900"
+)
+
+root.minsize(
+    1150,
+    780
+)
+
+
+# ============================================================
+# ESTILO
+# ============================================================
+
+style = ttk.Style()
+
+try:
+    style.theme_use(
+        "clam"
+    )
+except:
+    pass
+
+
+# ============================================================
+# TÍTULO
+# ============================================================
+
+titulo = ttk.Label(
+    root,
+    text=(
+        "ACTIVIDAD 2 — IDENTIFICACIÓN DE UN "
+        "SISTEMA DE SEGUNDO ORDEN"
+    ),
+    font=("Arial", 18, "bold")
+)
+
+titulo.pack(
+    pady=(15, 5)
+)
+
+
+subtitulo = ttk.Label(
+    root,
+    text=(
+        "Análisis de sobreimpulso, ζ, ωn y tiempo muerto"
+    ),
+    font=("Arial", 11)
+)
+
+subtitulo.pack(
+    pady=(0, 10)
+)
+
+
+# ============================================================
+# ENUNCIADO
+# ============================================================
+
+frame_enunciado = ttk.LabelFrame(
+    root,
+    text="Enunciado de la actividad",
+    padding=10
+)
+
+frame_enunciado.pack(
+    fill="x",
+    padx=15,
+    pady=5
+)
+
+
+enunciado = (
+    "A un sistema de segundo orden se le aplicó una entrada "
+    "de escalón unitario sin retraso y la respuesta en la salida "
+    "que se obtuvo al hacer esto se vio de la siguiente forma:\n\n"
+
+    "Encuentra los parámetros característicos del sistema en "
+    "cuestión para obtener la función de transferencia. Utiliza "
+    "Python con matplotlib para comprobar que tu función de "
+    "transferencia obtenida sea la correcta y se asemeje mucho "
+    "con la otorgada en el problema."
+)
+
+
+label_enunciado = ttk.Label(
+    frame_enunciado,
+    text=enunciado,
+    wraplength=1200,
+    justify="left",
+    font=("Arial", 10)
+)
+
+label_enunciado.pack(
+    anchor="w"
+)
+
+
+# ============================================================
+# CONTENEDOR PRINCIPAL
+# ============================================================
+
+frame_principal = ttk.Frame(
+    root
+)
+
+frame_principal.pack(
+    fill="both",
+    expand=True,
+    padx=15,
+    pady=10
+)
+
+
+# ============================================================
+# PANEL IZQUIERDO
+# ============================================================
+
+frame_izquierdo = ttk.Frame(
+    frame_principal
+)
+
+frame_izquierdo.pack(
+    side="left",
+    fill="both",
+    expand=True,
+    padx=(0, 10)
+)
+
+
+# ============================================================
+# DATOS
+# ============================================================
+
+frame_datos = ttk.LabelFrame(
+    frame_izquierdo,
+    text="1. Datos obtenidos de la gráfica",
+    padding=10
+)
+
+frame_datos.pack(
+    fill="x",
+    pady=5
+)
+
+
+# K
+ttk.Label(
+    frame_datos,
+    text="Valor final K:"
+).grid(
+    row=0,
+    column=0,
+    sticky="w",
+    padx=5,
+    pady=5
+)
+
+entry_K = ttk.Entry(
+    frame_datos,
+    width=15
+)
+
+entry_K.insert(
+    0,
+    str(K_INICIAL)
+)
+
+entry_K.grid(
+    row=0,
+    column=1,
+    padx=5,
+    pady=5
+)
+
+
+# Ymax
+ttk.Label(
+    frame_datos,
+    text="Valor máximo Ymax:"
+).grid(
+    row=1,
+    column=0,
+    sticky="w",
+    padx=5,
+    pady=5
+)
+
+entry_ymax = ttk.Entry(
+    frame_datos,
+    width=15
+)
+
+entry_ymax.insert(
+    0,
+    str(VALOR_MAXIMO_INICIAL)
+)
+
+entry_ymax.grid(
+    row=1,
+    column=1,
+    padx=5,
+    pady=5
+)
+
+
+# Tiempo muerto
+ttk.Label(
+    frame_datos,
+    text="Tiempo muerto L (s):"
+).grid(
+    row=2,
+    column=0,
+    sticky="w",
+    padx=5,
+    pady=5
+)
+
+entry_L = ttk.Entry(
+    frame_datos,
+    width=15
+)
+
+entry_L.insert(
+    0,
+    str(TIEMPO_MUERTO_INICIAL)
+)
+
+entry_L.grid(
+    row=2,
+    column=1,
+    padx=5,
+    pady=5
+)
+
+
+# Tiempo del pico
+ttk.Label(
+    frame_datos,
+    text="Tiempo del pico (s):"
+).grid(
+    row=3,
+    column=0,
+    sticky="w",
+    padx=5,
+    pady=5
+)
+
+entry_tpico = ttk.Entry(
+    frame_datos,
+    width=15
+)
+
+entry_tpico.insert(
+    0,
+    str(TIEMPO_PICO_INICIAL)
+)
+
+entry_tpico.grid(
+    row=3,
+    column=1,
+    padx=5,
+    pady=5
+)
+
+
+# ============================================================
+# BOTONES
+# ============================================================
+
+frame_botones = ttk.Frame(
+    frame_izquierdo
+)
+
+frame_botones.pack(
+    fill="x",
+    pady=10
+)
+
+
+boton_calcular = ttk.Button(
+    frame_botones,
+    text="CALCULAR Y GRAFICAR",
+    command=calcular
+)
+
+boton_calcular.pack(
+    side="left",
+    padx=5
+)
+
+
+boton_guardar = ttk.Button(
+    frame_botones,
+    text="GUARDAR GRÁFICA",
+    command=guardar_grafica
+)
+
+boton_guardar.pack(
+    side="left",
+    padx=5
+)
+
+
+# ============================================================
+# PROCEDIMIENTO
+# ============================================================
+
+frame_procedimiento = ttk.LabelFrame(
+    frame_izquierdo,
+    text="2. Procedimiento matemático",
+    padding=5
+)
+
+frame_procedimiento.pack(
+    fill="both",
+    expand=True,
+    pady=5
+)
+
+
+text_resultado = tk.Text(
+    frame_procedimiento,
+    wrap="word",
+    font=("Consolas", 8)
+)
+
+text_resultado.pack(
+    fill="both",
+    expand=True
+)
+
+
+# ============================================================
+# COMPROBACIÓN
+# ============================================================
+
+frame_similitud = ttk.LabelFrame(
+    frame_izquierdo,
+    text="3. Comprobación y análisis",
+    padding=5
+)
+
+frame_similitud.pack(
+    fill="both",
+    expand=True,
+    pady=5
+)
+
+
+text_similitud = tk.Text(
+    frame_similitud,
+    wrap="word",
+    font=("Consolas", 8)
+)
+
+text_similitud.pack(
+    fill="both",
+    expand=True
+)
+
+
+# ============================================================
+# PANEL DERECHO - GRÁFICA
+# ============================================================
+
+frame_grafica = ttk.LabelFrame(
+    frame_principal,
+    text="4. Comprobación mediante Matplotlib",
+    padding=5
+)
+
+frame_grafica.pack(
+    side="right",
+    fill="both",
+    expand=True
+)
+
+
+# ============================================================
+# FIGURA
+# ============================================================
+
+fig, ax = plt.subplots(
+    figsize=(7, 5)
+)
+
+ax.set_title(
+    "Respuesta del sistema"
+)
+
+ax.set_xlabel(
+    "Tiempo (s)"
+)
+
+ax.set_ylabel(
+    "Amplitud"
+)
+
+ax.grid(
+    True,
+    alpha=0.3
+)
+
+
+canvas = FigureCanvasTkAgg(
+    fig,
+    master=frame_grafica
+)
+
+canvas.draw()
+
+canvas.get_tk_widget().pack(
+    fill="both",
+    expand=True
+)
+
+
+# ============================================================
+# PIE
+# ============================================================
+
+footer = ttk.Label(
+    root,
+    text="Python • NumPy • Matplotlib • Tkinter",
+    font=("Arial", 9)
+)
+
+footer.pack(
+    pady=5
+)
+
+
+# ============================================================
+# EJECUTAR AUTOMÁTICAMENTE
+# ============================================================
+
+root.after(
+    300,
+    calcular
+)
+
+
+# ============================================================
+# EJECUTAR APP
+# ============================================================
+
+root.mainloop()
